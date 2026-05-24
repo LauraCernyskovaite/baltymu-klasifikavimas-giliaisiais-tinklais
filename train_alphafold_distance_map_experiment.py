@@ -1,5 +1,4 @@
 """
-=============================================================================
 Fermentų / baltymų be EC klasifikavimas naudojant AlphaFold 3D struktūras.
 
 Skriptas papildo esamą sekos + biocheminių požymių eksperimentą:
@@ -17,7 +16,6 @@ Naudoja:
 
 Svarbu: AlphaFold struktūros yra prognozuotos, todėl rezultatuose jas reikia
 vadinti "AlphaFold prognozuotomis struktūromis", ne eksperimentinėmis PDB.
-=============================================================================
 """
 
 import os
@@ -70,21 +68,20 @@ except ImportError:
     BIOPYTHON_AVAILABLE = False
 
 
-# ================================================================
-# 1) NUSTATYMAI
-# ----------------------------------------------------------------
-# Konfigūracijos blokas — visi svarbūs parametrai vienoje vietoje.
-#
-# MAP_SIZE=128 — visos atstumų matricos pakeičiamos į vienodą
-#   128×128 dydį, nes CNN įvestis turi būti fiksuotos formos.
-#
-# DISTANCE_CLIP=32.0 — atstumai didesni nei 32 Å apkarpomi.
-#   Po apkarpymo reikšmės normalizuojamos ir invertuojamos, kad
-#   artimi C-alpha atomų kontaktai matricoje būtų ryškesni.
-#
-# MAX_STRUCTURES=None — naudojamos visos turimos struktūros.
-#   Greito testo tikslais galima nustatyti, pvz., 800.
-# ================================================================
+'''
+1) NUSTATYMAI
+
+Konfigūracijos blokas - visi svarbūs parametrai vienoje vietoje.
+
+MAP_SIZE=128 - visos atstumų matricos pakeičiamos į vienodą
+128×128 dydį, nes CNN įvestis turi būti fiksuotos formos.
+
+DISTANCE_CLIP=32.0 - atstumai didesni nei 32 Å apkarpomi.
+Po apkarpymo reikšmės normalizuojamos ir invertuojamos, kad
+artimi C-alpha atomų kontaktai matricoje būtų ryškesni.
+
+MAX_STRUCTURES=None - naudojamos visos turimos struktūros.
+'''
 
 SEED = 42
 
@@ -109,43 +106,22 @@ random.seed(SEED)
 np.random.seed(SEED)
 tf.random.set_seed(SEED)
 
+'''
+2) SEKOS VALYMAS IR BIOCHEMINIAI POŽYMIAI
 
-# ================================================================
-# 2) SEKOS VALYMAS IR BIOCHEMINIAI POZYMIAI
-# ----------------------------------------------------------------
-# Šiame eksperimente naudojamas išplėstas 57 požymių rinkinys:
-# 54 požymiai apskaičiuojami iš sekos, o 3 papildomi požymiai
-# gaunami iš AlphaFold struktūros failo.
-#
-# Papildomai įtraukta:
-#   sieros grupė (C, M) — cisteinas gali būti susijęs su
-#     disulfidinėmis jungtimis, o metioninas apibūdina sieros
-#     turinčių aminorūgščių dalį sekoje.
-#
-#   DIPEPTIDES — dviejų gretimų aminorūgščių porų dažniai:
-#     GG/GP/PG/PP — glicino ir prolino poros gali atspindėti
-#       lokalias lankstumo ar posūkio savybes.
-#     CC, DE/ED, KR/RK, ST — pasirinktos poros, kurios gali būti
-#       informatyvios dėl krūvio, sieros turinčių liekanų arba
-#       galimų funkcinių motyvų.
-#
-#   aa_entropy — aminorūgščių įvairovės entropija pagal 20 AA dažnius.
-#     Didesnė reikšmė reiškia įvairesnę aminorūgščių sudėtį,
-#     mažesnė — labiau dominuojančias kelias aminorūgštis.
-#
-#   positive_negative_ratio, charge_balance — supaprastintas
-#     elektrostatinio profilio aprašas pagal įkrautas aminorūgštis.
-#
-#   alphafold_plddt_mean/std — kokybės požymiai iš struktūros failo.
-#     pLDDT = AlphaFold pasitikėjimo balas (0–100):
-#       >90: labai aukštas (struktūra patikima)
-#       70–90: geras
-#       <50: mažesnio pasitikėjimo arba galimai netvarkinga sritis
-#     std parodo, ar visas baltymas vienodai modeliuotas.
-#
-#   ca_atom_count — realus Cα atomų skaičius struktūroje
-#     (gali skirtis nuo sekos ilgio, jei dalis nesumodelinta).
-# ================================================================
+Šiame eksperimente naudojamas 57 požymių rinkinys:
+54 požymiai apskaičiuojami iš aminorūgščių sekos, o 3 požymiai
+gaunami iš AlphaFold struktūros failo.
+
+Papildomai įtraukiami sieros turinčių aminorūgščių, pasirinktų
+dipeptidų, aminorūgščių įvairovės ir elektrostatinio profilio
+požymiai.
+
+Iš AlphaFold struktūros failo naudojami pLDDT vidurkis,
+pLDDT standartinis nuokrypis ir Cα atomų skaičius. Šie požymiai
+apibūdina struktūros modelio pasitikėjimą ir turimos struktūrinės
+informacijos kiekį.
+'''
 
 AA = list("ACDEFGHIKLMNPQRSTVWY")
 AA_SET = set(AA)
@@ -205,8 +181,6 @@ BIO_FEATURES = (
 
 
 def sequence_entropy(seq: str) -> float:
-    # Šenono entropija: -Σ p(aa) * log2(p(aa))
-    # Matuoja aminorūgščių įvairovę sekoje.
     n = len(seq)
     if n == 0:
         return 0.0
@@ -239,8 +213,6 @@ def calculate_bio_features(seq: str) -> dict:
     for aa in AA:
         feats[f"aa_{aa}_fraction"] = clean.count(aa) / n
 
-    # Dipeptidų dažnis: kiek kartų pora (AA_i, AA_i+1) pasitaiko
-    # sekoje, normalizuota pagal galimų porų skaičių (n-1).
     denom = max(n - 1, 1)
     for dp in DIPEPTIDES:
         feats[f"dipeptide_{dp}_fraction"] = clean.count(dp) / denom
@@ -276,38 +248,27 @@ def calculate_bio_features(seq: str) -> dict:
     return {k: float(feats.get(k, 0.0)) for k in BIO_FEATURES}
 
 
-# ================================================================
-# 3) PDB -> 2D ATSTUMŲ MATRICA
-# ----------------------------------------------------------------
-# Pagrindinis šio eksperimento skiriamasis bruožas — AlphaFold
-# prognozuota 3D struktūra paverčiama 2D atstumų matrica, kurią
-# gali apdoroti konvoliucinis neuroninis tinklas.
-#
-# resolve_structure_path():
-#   Ieško PDB failo keliuose skirtinguose kataloguose —
-#   apsauga nuo kelių nesutapimo, jei CSV sukurtas kitame aplanke.
-#
-# parse_ca_coordinates_from_pdb():
-#   PDB formatas yra pozicinis — kiekvienas laukas užima
-#   fiksuotą simbolių poziciją eilutėje. Iš kiekvieno
-#   ATOM įrašo imamas tik "CA" (Cα) atomas:
-#     - Cα apibūdina aminorūgšties pagrindinės grandinės padėtį;
-#     - naudojant vieną atomą liekanai sumažinamas duomenų kiekis;
-#     - AlphaFold pLDDT balas saugomas B-factor stulpelyje.
-#
-# make_distance_image():
-#   1. Vektorinis atstumo skaičiavimas: diff[i,j] = coord[i]-coord[j]
-#      Vienoje operacijoje apskaičiuojami visi N×N atstumai.
-#   2. Apkarpymas iki DISTANCE_CLIP=32Å ir normalizavimas [0,1]:
-#      labai dideli atstumai suspaudžiami, kad neiškreiptų mastelio.
-#   3. Inversija (1 - dist): artimi atomai tampa šviesiais pikseliais.
-#      Taip lokalių kontaktų sritys tampa ryškesnės CNN įvestyje.
-#   4. tf.image.resize į 128×128: skirtingo ilgio baltymams
-#      sulyginamas dydis. CNN reikalauja fiksuotos įvesties.
-#
-# Pirmieji 6 vaizdai išsaugomi maps_preview/ — vizualinė
-# patikra, ar matricos sugeneruotos tvarkingai.
-# ================================================================
+'''
+3) PDB -> 2D ATSTUMŲ MATRICA
+
+Šiame eksperimente AlphaFold prognozuota 3D struktūra paverčiama
+2D atstumų matrica, kuri naudojama kaip CNN įvestis.
+
+resolve_structure_path() suranda PDB failą galimuose kataloguose.
+
+parse_ca_coordinates_from_pdb() iš PDB failo paima Cα atomų
+koordinates ir pLDDT reikšmes. Cα atomai naudojami todėl, kad jie
+apibūdina aminorūgščių pagrindinės grandinės padėtį ir sumažina
+duomenų kiekį.
+
+make_distance_image() apskaičiuoja visų Cα atomų porų atstumus,
+juos apkarpo iki DISTANCE_CLIP, normalizuoja, invertuoja ir pakeičia
+matricos dydį į 128×128. Taip gaunamas vienodo dydžio vaizdas,
+tinkamas konvoliuciniam neuroniniam tinklui.
+
+Pirmieji keli sugeneruoti vaizdai išsaugomi maps_preview kataloge
+vizualinei patikrai.
+'''
 
 def resolve_structure_path(structure_file: str) -> Path | None:
     if not isinstance(structure_file, str) or not structure_file.strip():
@@ -353,7 +314,6 @@ def parse_ca_coordinates_from_pdb(pdb_path: Path):
 
 
 def make_distance_image(coords: np.ndarray, size: int = MAP_SIZE) -> np.ndarray:
-    # Vektorizuotas N×N atstumo skaičiavimas be Python ciklo.
     diff = coords[:, None, :] - coords[None, :, :]
     dist = np.sqrt(np.sum(diff * diff, axis=-1))
 
@@ -365,7 +325,6 @@ def make_distance_image(coords: np.ndarray, size: int = MAP_SIZE) -> np.ndarray:
     image = 1.0 - dist
     image = image[..., None].astype(np.float32)
 
-    # Dydis keičiamas į fiksuotą naudojant bilinearinę interpoliaciją.
     image = tf.image.resize(image, (size, size), method="bilinear").numpy()
     return image.astype(np.float32)
 
@@ -385,8 +344,6 @@ def load_dataset_with_structures() -> pd.DataFrame:
     df = df[df["resolved_structure_file"].notna()].reset_index(drop=True)
 
     if MAX_STRUCTURES is not None and len(df) > MAX_STRUCTURES:
-        # Stratifikuotas apribojimas: išsaugoma proporcija kiekvienam
-        # split+label deriniui, kad nebūtų prarastos mažos grupės.
         df = (
             df.groupby(["split", "label"], group_keys=False)
             .apply(lambda x: x.sample(
@@ -398,18 +355,17 @@ def load_dataset_with_structures() -> pd.DataFrame:
 
     return df
 
-
 def build_arrays(df: pd.DataFrame):
-    # ----------------------------------------------------------------
-    # Iteruoja per visus įrašus su PDB failais ir kiekvienam įrašui:
-    #   1. Nuskaito Cα koordinates ir pLDDT reikšmes iš PDB
-    #   2. Generuoja 128×128 atstumų matricą (2D vaizdą)
-    #   3. Apskaičiuoja 57 biocheminius požymius
-    #   4. Papildo bio požymius pLDDT statistikomis ir Cα skaičiumi
-    #
-    # Pirmieji 6 vaizdai išsaugomi kaip PNG vizualinei patikrai.
-    # Progreso žinutė kas 500 įrašų.
-    # ----------------------------------------------------------------
+    '''
+    Apdorojami visi įrašai su PDB failais. Kiekvienam įrašui:
+        1. Nuskaitomos Cα koordinatės ir pLDDT reikšmės iš PDB failo
+        2. Sugeneruojama 128×128 atstumų matrica kaip 2D vaizdas
+        3. Apskaičiuojami biocheminiai požymiai
+        4. Požymiai papildomi pLDDT statistikomis ir Cα atomų skaičiumi
+
+    Pirmieji 6 vaizdai išsaugomi PNG formatu vizualinei patikrai.
+    Progreso žinutė išvedama kas 500 įrašų.
+    '''
     bio_rows = []
     maps = []
     labels = []
@@ -426,7 +382,6 @@ def build_arrays(df: pd.DataFrame):
         image = make_distance_image(coords)
         bio = calculate_bio_features(row["sequence"])
 
-        # AlphaFold kokybės požymiai tiesiogiai iš struktūros failo.
         bio["alphafold_plddt_mean"] = float(np.mean(plddt))
         bio["alphafold_plddt_std"] = float(np.std(plddt))
         bio["ca_atom_count"] = float(len(coords))
@@ -474,33 +429,27 @@ def build_arrays(df: pd.DataFrame):
     return X_map, X_bio_raw, y, split, meta, bio_feature_names
 
 
-# ================================================================
-# 4) MODELIŲ ARCHITEKTŪROS
-# ----------------------------------------------------------------
-# Trys modeliai su augančiu sudėtingumu, leidžiantys įvertinti
-# kiekvieno informacijos šaltinio indėlį.
-#
-# build_bio_mlp():
-#   MLP su 57 biocheminiais požymiais (išplėstas lyginant su
-#   pagrindiniu eksperimentu). Šis modelis yra palyginamasis
-#   variantas, nes nenaudoja atstumų matricos.
-#
-# distance_cnn_branch():
-#   2D CNN šaka atstumų matricai. Trys konvoliuciniai blokai:
-#     Conv2D(24, 5×5) — platesniems lokaliems struktūriniams
-#       dėsningumams aptikti.
-#     Conv2D(48, 3×3) — smulkesniems kontaktų šablonams aptikti.
-#     Conv2D(96, 3×3) — aukštesnio lygio struktūriniams požymiams.
-#   GlobalAveragePooling2D sutraukia visą matricą į vektorių.
-#   clipnorm=1.0 (Adam) — gradientų apkarpymas stabilizuoja
-#   mokymąsi su 2D CNN, kur gradientai gali išaugti.
-#
-# build_fusion_model():
-#   Dviejų šakų modelis: atstumų matrica CNN + Bio MLP.
-#   Tikrina, ar struktūrinė ir biocheminė informacija papildo
-#   viena kitą. Konkatenavimas sujungia abi šakas į bendrą
-#   klasifikatoriaus įvestį.
-# ================================================================
+'''
+4) MODELIŲ ARCHITEKTŪROS
+
+Naudojami trys modeliai, leidžiantys įvertinti skirtingų
+informacijos šaltinių indėlį.
+
+build_bio_mlp()
+  MLP modelis naudoja 57 biocheminius požymius.
+
+distance_cnn_branch()
+  2D CNN šaka apdoroja atstumų matricą. Konvoliuciniai sluoksniai
+  mokosi lokalių struktūrinių dėsningumų ir kontaktų šablonų.
+  GlobalAveragePooling2D visą matricą paverčia požymių vektoriumi.
+  Adam optimizatoriuje naudojamas clipnorm=1.0, kad mokymas būtų
+  stabilesnis.
+
+build_fusion_model()
+  Dviejų šakų modelis sujungia atstumų matricos CNN šaką ir
+  biocheminių požymių MLP šaką. Taip tikrinama, ar struktūrinė
+  ir biocheminė informacija papildo viena kitą.
+'''
 
 def build_bio_mlp(n_features: int):
     inp = layers.Input(shape=(n_features,), name="bio_input")
@@ -575,7 +524,7 @@ def build_fusion_model(n_features: int):
 
 
 def compile_model(model):
-    # clipnorm=1.0 — gradientų apkarpymas: jei gradiento norma
+    # clipnorm=1.0 - gradientų apkarpymas: jei gradiento norma
     # viršija 1.0, jis proporcingai sumažinamas. Stabilizuoja
     # mokymą su 2D CNN, kur gradientai gali išaugti.
     model.compile(
@@ -611,29 +560,24 @@ def get_callbacks(model_name: str):
         callbacks.CSVLogger(str(RESULTS_DIR / "reports" / f"{model_name}_training_log.csv")),
     ]
 
+'''
+5) VERTINIMAS IR VIZUALIZACIJOS
 
-# ================================================================
-# 5) VERTINIMAS IR VIZUALIZACIJOS
-# ----------------------------------------------------------------
-# Pagalbinės funkcijos, bendros visiems modeliams.
-#
-# find_best_threshold():
-#   F1 maksimizuojantis slenkstis randamas iš validacijos rinkinio.
-#   Testavimo rinkinys slenksčiui parinkti nenaudojamas.
-#
-# evaluate_model():
-#   Apskaičiuojamos pagrindinės darbo metrikos: ROC-AUC, Accuracy,
-#   F1, MCC ir sumaišymo matrica. Average Precision taip pat
-#   išsaugoma faile, bet darbo tekste modeliai pagal ją nelyginami.
-#
-# save_reports():
-#   Visų modelių rezultatų santrauka, ROC kreivės, klaidų
-#   matricos, testo spėjimų lentelė.
-#
-#   Permutacinė svarba Bio MLP modeliui skaičiuojama naudojant
-#   BioWrapper — apvalkalas, leidžiantis sklearn funkcijai
-#   dirbti su Keras modeliu (sklearn tikisi predict_proba formato).
-# ================================================================
+Šiame bloke apibrėžiamos bendros modelių vertinimo ir rezultatų
+vizualizavimo funkcijos.
+
+find_best_threshold()
+  Iš validacijos rinkinio parenka F1 rodiklį maksimizuojantį
+  slenkstį. Testavimo rinkinys slenksčiui parinkti nenaudojamas.
+
+evaluate_model()
+  Apskaičiuoja pagrindines metrikas: ROC-AUC, Accuracy, F1, MCC
+  ir sumaišymo matricą.
+
+save_reports()
+  Išsaugo modelių rezultatų santrauką, ROC kreives, klaidų
+  matricas ir testo prognozių lentelę.
+'''
 
 def get_class_weights(y_train):
     classes = np.unique(y_train)
@@ -743,15 +687,6 @@ def save_reports(results, y_test, meta_test, feature_names, scaler, bio_model, X
         out[f"error_{key}"] = out[f"pred_{key}"] != out["true_label"]
     out.to_csv(RESULTS_DIR / "reports" / "test_predictions.csv", index=False)
 
-    # ----------------------------------------------------------------
-    # Permutacinė svarba Bio MLP modeliui.
-    # BioWrapper — sklearn apvalkalas Keras modeliui:
-    #   sklearn.inspection.permutation_importance tikisi objekto
-    #   su predict_proba(X) metodu, grąžinančiu (N, 2) masyvą.
-    #   Keras model.predict() grąžina (N, 1) — reikia apvynioti.
-    # Skaičiuojama 8 kartus (n_repeats) ir imamas vidurkis —
-    # taip gauname stabilesnį įvertinimą nei vienkartinis.
-    # ----------------------------------------------------------------
     try:
         class BioWrapper(ClassifierMixin, BaseEstimator):
             def __init__(self, model):
@@ -814,22 +749,24 @@ def save_reports(results, y_test, meta_test, feature_names, scaler, bio_model, X
     print(f"\nRezultatai issaugoti: {RESULTS_DIR}")
 
 
-# ================================================================
-# 6) PAGRINDINIS PALEIDIMAS (main)
-# ----------------------------------------------------------------
-# Visa eksperimento eiga:
-#   1. Duomenų įkėlimas — tik įrašai su AlphaFold struktūromis
-#   2. Matricų generavimas — kiekvienam PDB failui sukuriama
-#      128×128 atstumų matrica ir skaičiuojami bio požymiai
-#   3. Padalinimas į train/val/test pagal "split" stulpelį
-#      (MMseqs2 klasterinis padalinimas, atliktas iš anksto)
-#   4. StandardScaler normalizacija — fit tik su train
-#   5. Trys modeliai treniruojami nuosekliai:
-#      a) Bio MLP — bazinė linija šiam eksperimentui
-#      b) Distance-map CNN — tik struktūrinė informacija
-#      c) Fusion — struktūra + biochemija kartu
-#   6. Rezultatų išsaugojimas ir palyginimas
-# ================================================================
+'''
+6) PAGRINDINIS PALEIDIMAS (main)
+
+Pagrindinė eksperimento eiga:
+
+1. Įkeliami tik tie įrašai, kurie turi AlphaFold struktūras.
+2. Iš PDB failų sugeneruojamos 128×128 atstumų matricos ir
+   apskaičiuojami biocheminiai požymiai.
+3. Duomenys padalijami į train, val ir test rinkinius pagal
+   iš anksto atliktą MMseqs2 klasterinį padalinimą.
+4. StandardScaler pritaikomas tik treniravimo rinkiniui, o
+   validacijos ir testavimo rinkiniai tik transformuojami.
+5. Nuosekliai treniruojami trys modeliai:
+   a) Bio MLP
+   b) Distance-map CNN
+   c) Fusion modelis
+6. Rezultatai išsaugomi ir palyginami.
+'''
 
 def main():
     print("=" * 72)
@@ -848,14 +785,10 @@ def main():
     print(f"\nNaudojama po PDB nuskaitymo: {len(y)}")
     print(pd.Series(split).value_counts())
 
-    # Padalinimas pagal "split" stulpelį iš CSV —
-    # MMseqs2 klasterinis padalinimas atliktas iš anksto.
     train_idx = split == "train"
     val_idx = split == "val"
     test_idx = split == "test"
-
-    # StandardScaler: fit() tik su train, transform() su visais rinkiniais.
-    # Taip išvengiama val/test informacijos nutekėjimo į normalizaciją.
+ 
     scaler = StandardScaler()
     X_bio_train = scaler.fit_transform(X_bio_raw[train_idx])
     X_bio_val = scaler.transform(X_bio_raw[val_idx])
@@ -932,7 +865,6 @@ def main():
         bio_model=bio_model,
         X_bio_test=X_bio_test,
     )
-
 
 if __name__ == "__main__":
     main()

@@ -72,20 +72,19 @@ except ImportError:
     print("Biopython nerastas - kai kurie pozymiai bus 0.0.")
 
 """
-================================================================
 1) NUSTATYMAI
-----------------------------------------------------------------
+
 Visi pagrindiniai hiperparametrai surinkti vienoje vietoje, kad
 eksperimentą būtų galima atkartoti arba kryptingai pakeisti.
 
-MAX_LEN=1024 — fiksuotas aminorūgščių sekos ilgis CNN įvesčiai.
+MAX_LEN=1024 - fiksuotas aminorūgščių sekos ilgis CNN įvesčiai.
 Ilgesnėms sekoms paliekama pradžia ir pabaiga, o trumpesnės sekos
 papildomos nuliais.
 
-EMB_DIM=32 — kiekvienas aminorūgšties indeksas embedding sluoksnyje
+EMB_DIM=32 - kiekvienas aminorūgšties indeksas embedding sluoksnyje
 paverčiamas 32 matmenų mokomu skaitiniu vektoriumi.
 
-LR=3e-4 — Adam optimizatoriaus mokymosi greitis, naudotas visiems
+LR=3e-4 - Adam optimizatoriaus mokymosi greitis, naudotas visiems
 neuroninių tinklų modeliams šiame eksperimente.
 """
 
@@ -142,9 +141,8 @@ print(f"Rezultatai: {RESULTS_DIR}")
 print("=" * 70)
 
 """
-================================================================
 2) AMINORŪGŠČIŲ VALYMAS IR KODAVIMAS
-----------------------------------------------------------------
+
 Neuroniniai tinklai apdoroja skaitinius duomenis, todėl
 aminorūgščių seka paverčiama sveikųjų skaičių masyvu.
 
@@ -157,7 +155,6 @@ encode_seq():
     Kiekvienai aminorūgščiai priskiria indeksą. Reikšmė 0 paliekama
     sekos papildymui (padding), o X turi atskirą indeksą nežinomoms
     aminorūgštims.
-================================================================
 """
 
 AA = list("ACDEFGHIKLMNPQRSTVWY")
@@ -184,7 +181,6 @@ def encode_seq(seq: str, max_len: int = MAX_LEN) -> np.ndarray:
     seq = str(seq)
 
     # "Start+end" strategija: išsaugomi abu sekos galai.
-    # Tai praktiškas kompromisas fiksuoto ilgio CNN įvesčiai.
     if len(seq) > max_len:
         left = max_len // 2
         right = max_len - left
@@ -192,7 +188,7 @@ def encode_seq(seq: str, max_len: int = MAX_LEN) -> np.ndarray:
 
     ids = [AA2IDX.get(ch, AA2IDX["X"]) for ch in seq]
 
-    # Papildymas nuliais (zero-padding) iki fiksuoto ilgio —
+    # Papildymas nuliais (zero-padding) iki fiksuoto ilgio -
     # CNN ir Embedding sluoksniai reikalauja vienodo dydžio įvesties.
     if len(ids) < max_len:
         ids += [0] * (max_len - len(ids))
@@ -200,9 +196,8 @@ def encode_seq(seq: str, max_len: int = MAX_LEN) -> np.ndarray:
     return np.array(ids[:max_len], dtype=np.int32)
 
 """
-================================================================
-3) BIOCHEMINIAI POZYMIAI
------------------------------------------------------------------
+3) BIOCHEMINIAI POŽYMIAI
+
 Kiekvienai sekai apskaičiuojamas 29 biocheminių požymių rinkinys.
 Šie požymiai apibūdina ne lokalią aminorūgščių tvarką, o globalias
 baltymo fizines ir chemines savybes.
@@ -276,8 +271,7 @@ def calculate_bio_features(seq: str):
         feats[f"aa_{aa}_fraction"] = clean.count(aa) / n
 
     # Cisteino tankis aprašo santykinį cisteino liekanų kiekį.
-    # Cisteinai gali sudaryti disulfidinius ryšius, todėl šis
-    # požymis gali būti susijęs su struktūros stabilumu.
+    # Šis požymis gali būti susijęs su struktūros stabilumu.
     feats["cysteine_density"] = (clean.count("C") / 2.0) / max(n / 100.0, 1.0)
 
     feats.update({
@@ -311,31 +305,28 @@ def calculate_bio_features(seq: str):
     return {k: float(feats[k]) for k in BIO_FEATURES}
 
 """
-# ================================================================
 # 4) PAGALBINĖS FUNKCIJOS
-# ----------------------------------------------------------------
-# Pagalbiniai įrankiai, naudojami per visą eksperimentą.
-#
-# load_split_csv()  — nuskaito CSV, patikrina stulpelius,
-#   ištrina tuščias eilutes, išfiltruoja per trumpas sekas (< 5 AA).
-#
-# make_bio_df()     — iteruoja per DataFrame ir skaičiuoja
-#   biocheminius požymius kiekvienai sekai.
-#
-# get_class_weights() — apskaičiuoja klasių svorius.
-#   Jei treniravimo rinkinyje yra 60% fermento ir 40% ne fermento,
-#   retesnės klasės klaidos baudžiamos labiau. Tai kompensuoja
-#   nedidelį klasių disbalansą ir pagerina jautrumą mažesnei klasei.
-#
-# find_best_threshold() — ieškomas slenkstis tarp 0 ir 1, kuris
-#   maksimizuoja F1 rodiklį validacijos rinkinyje.
-#   Testavimo rinkinys slenksčiui parinkti nenaudojamas.
-#
-# evaluate_model()  — apskaičiuoja visas metrikas:
-#   ROC-AUC, Accuracy, F1, MCC ir sumaišymo matricą. Kode taip pat
-#   išsaugomas Average Precision, tačiau pagrindiniame darbo tekste
-#   modeliai pagal šią metriką nelyginami.
-# ================================================================
+
+Pagalbiniai įrankiai, naudojami per visą eksperimentą.
+
+load_split_csv() - nuskaito CSV, patikrina stulpelius,
+    ištrina tuščias eilutes, išfiltruoja per trumpas sekas (< 5 AA).
+
+make_bio_df() - pereina per duomenų lentelės eilutes 
+    ir kiekvienai baltymo sekai apskaičiuoja biocheminius požymius.
+
+get_class_weights() - apskaičiuoja klasių svorius.
+    Jei treniravimo rinkinyje viena klasė sudaro 60 %, o kita 40 %,
+    retesnės klasės pavyzdžiams suteikiamas didesnis svoris
+    nuostolio funkcijoje. Tai padeda kompensuoti nedidelį klasių
+    disbalansą ir leidžia modeliui geriau atsižvelgti į mažesnę klasę.
+
+find_best_threshold() - ieškomas slenkstis tarp 0 ir 1, kuris
+    maksimizuoja F1 rodiklį validacijos rinkinyje.
+    Testavimo rinkinys slenksčiui parinkti nenaudojamas.
+
+ evaluate_model() - apskaičiuoja visas metrikas:
+   ROC-AUC, Accuracy, F1, MCC ir sumaišymo matricą.
 """
 
 def load_split_csv(path: Path) -> pd.DataFrame:
@@ -431,23 +422,21 @@ def plot_training_history(history, model_name, out_path):
 
 
 def get_callbacks(model_name):
-    # ----------------------------------------------------------------
     # Treniravimo valdymo callbacks:
     #
-    # EarlyStopping — sustabdo mokymąsi, jei val_auc neauga
+    # EarlyStopping - sustabdo mokymąsi, jei val_auc neauga
     #   6 epochas iš eilės, ir atkuria geriausius svorius.
     #   Taip išvengiama permokymosi (overfitting).
     #
-    # ReduceLROnPlateau — jei val_loss nemažėja 3 epochas,
-    #   mokymosi greitis automatiškai perpus sumažinamas.
-    #   Leidžia modeliui "įlipti" į tikslesnį minimumą.
+    # ReduceLROnPlateau – jei validacijos nuostolis (val_loss) nemažėja 3 epochas,
+    #   mokymosi greitis automatiškai sumažinamas perpus.
+    #   Tai padeda modeliui stabiliau tęsti mokymą ir tiksliau optimizuoti
+    #   nuostolio funkciją.
     #
-    # ModelCheckpoint — išsaugo geriausią modelį pagal val_auc.
+    # ModelCheckpoint - išsaugo geriausią modelį pagal val_auc.
     #   Užtikrina, kad net jei vėliau rezultatai blogėja, turima geriausia versija.
     #
-    # CSVLogger — kiekvienos epochos metrikos išsaugomos CSV —
-    #   vėliau galima analizuoti mokymosi eigą.
-    # ----------------------------------------------------------------
+    # CSVLogger - kiekvienos epochos metrikos išsaugomos CSV.
     return [
         callbacks.EarlyStopping(
             monitor="val_auc",
@@ -473,46 +462,42 @@ def get_callbacks(model_name):
         callbacks.CSVLogger(f"{RESULTS_DIR}/reports/{model_name}_training_log.csv"),
     ]
 
+"""
+5) MODELIŲ ARCHITEKTŪROS
 
-# ================================================================
-# 5) MODELIŲ ARCHITEKTŪROS
-# ----------------------------------------------------------------
-# Trys skirtingos neuroninių tinklų architektūros, leidžiančios
-# palyginti, kuri informacija svarbesnė klasifikavimui.
-#
-# build_seq_branch() — bendra sekos apdorojimo šaka,
-#   naudojama tiek grynajame CNN, tiek multimodaliniame modelyje.
-#
-#   Embedding(VOCAB, EMB_DIM):
-#     Kiekvienas skaičius (AA kodas 1–21) paverčiamas
-#     EMB_DIM=32 matmenų vektoriumi. Šie vektoriai išmokami
-#     mokymo metu ir perduodami tolesniems Conv1D sluoksniams.
-#
-#   Conv1D(64, 9) — 64 filtrai, kiekvienas "slankioja" per
-#     9 gretimų AA langą. Taip aptinkami lokalūs sekos motyvai
-#     arba aminorūgščių deriniai.
-#
-#   Conv1D(64, 5) — antras sluoksnis ieško motyvų jau
-#     sutrumpintoje (po MaxPooling) sekoje — trumpesnių šablonų.
-#
-#   GlobalAveragePooling1D + GlobalMaxPooling1D + Concatenate:
-#     Average apibendrina bendrą signalą per visą seką.
-#     Max išsaugo stipriausią aptiktą motyvą, nepriklausomai
-#     nuo jo pozicijos sekoje.
-#
-#   L2 regularizacija (1e-4) — baudžia už per dideles svorių
-#     reikšmes, mažina permokymosi riziką.
-#
-# build_bio_mlp() — paprastas daugiasluoksnis perceptronas (MLP)
-#   biocheminiams požymiams. Trijų sluoksnių architektūra su
-#   BatchNorm ir Dropout. Modelis įvertina, kiek informacijos
-#   klasifikavimui suteikia globalūs biocheminiai požymiai.
-#
-# build_multimodal_cnn_bio() — dviejų šakų (multi-input) modelis:
-#   Sekos CNN šaka + Bio MLP šaka => Concatenate => klasifikatorius.
-#   Potencialiai naudingas, jei sekos ir biocheminiai požymiai
-#   suteikia vienas kitą papildančios informacijos.
-# ================================================================
+Trys skirtingos neuroninių tinklų architektūros, leidžiančios
+palyginti, kuri informacija svarbesnė klasifikavimui.
+
+build_seq_branch() - bendra sekos apdorojimo šaka,
+    naudojama tiek CNN, tiek multimodaliniame modelyje.
+
+    Embedding(VOCAB, EMB_DIM):
+     Kiekvienas skaičius (AA kodas 1-21) paverčiamas
+     EMB_DIM=32 matmenų vektoriumi. Šie vektoriai išmokami
+     mokymo metu ir perduodami tolesniems Conv1D sluoksniams.
+
+    Conv1D(64, 9) - 64 filtrai, kiekvienas "slankioja" per
+      9 gretimų AA langą. Taip aptinkami lokalūs sekos motyvai
+      arba aminorūgščių deriniai.
+
+    Conv1D(64, 5) - antras sluoksnis ieško motyvų jau
+      sutrumpintoje (po MaxPooling) sekoje - trumpesnių šablonų.
+
+    GlobalAveragePooling1D + GlobalMaxPooling1D + Concatenate:
+      Average apibendrina bendrą signalą per visą seką.
+      Max išsaugo stipriausią aptiktą motyvą, nepriklausomai
+      nuo jo pozicijos sekoje.
+ 
+    L2 regularizacija (1e-4) - riboja per dideles modelio svorių reikšmes
+      ir padeda sumažinti persimokymo riziką.
+
+build_bio_mlp() - paprastas daugiasluoksnis perceptronas (MLP)
+    biocheminiams požymiams. Modelis įvertina, kiek informacijos
+    klasifikavimui suteikia globalūs biocheminiai požymiai.
+
+build_multimodal_cnn_bio() - dviejų šakų (multi-input) modelis:
+    Sekos CNN šaka + Bio MLP šaka => Concatenate => klasifikatorius.
+"""
 
 def build_seq_branch(seq_input):
     x = layers.Embedding(
@@ -605,33 +590,23 @@ def build_multimodal_cnn_bio(n_features):
     )
     return model
 
+'''
+6) DUOMENŲ ĮKĖLIMAS IR PARUOŠIMAS
 
-# ================================================================
-# 6) DUOMENŲ ĮKĖLIMAS IR PARUOŠIMAS
-# ----------------------------------------------------------------
-# Nuskaitomi trys iš anksto paruošti CSV failai (train/val/test),
-# sukurti MMseqs2 klasterinio padalinimo metodu.
-#
-# Kodėl MMseqs2, o ne atsitiktinis padalinimas?
-#   Baltymų sekos evoliuciškai konservuotos — žmogaus ir pelės
-#   laktatdehidrogenazė gali turėti >90% identišką seką.
-#   Atsitiktinis padalinimas leistų tokioms sekoms patekti ir
-#   į treniravimo, ir į testavimo rinkinius, dirbtinai
-#   padidindamas rezultatus (homologinis nutekėjimas).
-#   MMseqs2 grupuoja sekas į klasterius pagal pasirinktus parametrus,
-#   tada klasteriai paskirstomi taip, kad vienas klasteris patektų
-#   tik į vieną rinkinį. Tai sumažina, bet visiškai nepanaikina,
-#   homologinio ar funkcinio panašumo nutekėjimo rizikos.
-#
-# Biocheminiai požymiai skaičiuojami atskirai kiekvienam
-# rinkiniui. StandardScaler PRITAIKOMAS tik treniravimo rinkiniui (fit),
-# o val ir test tik transformuojami — taip išvengiama
-# informacijos nutekėjimo iš val/test į mokymosi procesą.
-#
-# Išsaugomi du scaler'iai:
-#   bio_scaler.joblib — visų požymių (29)
-#   bio_scaler_without_length_mw.joblib — be length/MW (abliacijos)
-# ================================================================
+Nuskaitomi MMseqs2 klasteriniu metodu padalinti train/val/test CSV failai.
+Toks padalinimas sumažina homologinio nutekėjimo riziką,
+nes panašios sekos patenka tik į vieną duomenų rinkinį.
+
+Biocheminiai požymiai apskaičiuojami kiekvienam rinkiniui atskirai.
+StandardScaler pritaikomas tik treniravimo rinkiniui, 
+o validacijos ir testavimo rinkiniai tik transformuojami pagal treniravimo duomenis. 
+Taip išvengiama informacijos nutekėjimo.
+
+Taip pat išsaugomi du standartizavimo objektai:
+- bio_scaler.joblib – visiems 29 biocheminiams požymiams;
+- bio_scaler_without_length_mw.joblib – požymiams be sekos ilgio
+  ir molekulinės masės, naudojamiems abliacijos tyrime.
+'''
 
 df_train = load_split_csv(DATA_PATH / "train.csv")
 df_val = load_split_csv(DATA_PATH / "val.csv")
@@ -686,7 +661,7 @@ y_train = df_train["label"].to_numpy(dtype=np.int32)
 y_val = df_val["label"].to_numpy(dtype=np.int32)
 y_test = df_test["label"].to_numpy(dtype=np.int32)
 
-# fit() atliekamas tik su treniravimo duomenimis — išvengiama val/test nutekėjimo.
+# fit() atliekamas tik su treniravimo duomenimis - išvengiama val/test nutekėjimo.
 scaler = StandardScaler()
 X_bio_train = scaler.fit_transform(X_bio_train_raw)
 X_bio_val = scaler.transform(X_bio_val_raw)
@@ -703,39 +678,36 @@ joblib.dump(scaler_nolm, f"{RESULTS_DIR}/objects/bio_scaler_without_length_mw.jo
 class_weights = get_class_weights(y_train)
 print(f"\nClass weights: {class_weights}")
 
+'''
+7) MODELIŲ MOKYMAS
 
-# ================================================================
-# 7) MODELIŲ MOKYMAS
-# ----------------------------------------------------------------
-# Penki modeliai treniruojami nuosekliai ir jų rezultatai
-# kaupiami žodyne `results`. Kiekvienas modelis:
-#   1. Sukuriamas (build_*)
-#   2. Treniruojamas su EarlyStopping (fit)
-#   3. Geriausias slenkstis randamas iš validacijos
-#   4. Įvertinamas testavimo rinkinyje (evaluate_model)
-#
-# 1 etapas: CNN pagal seką
-#   Naudoja tik koduotą aminorūgščių seką. Leidžia įvertinti,
-#   kiek informacijos yra grynoje sekoje be papildomų požymių.
-#
-# 2 etapas: Bio MLP
-#   Naudoja 29 biocheminius požymius ir parodo, kiek informacijos
-#   suteikia globalios fizinės bei cheminės baltymo savybės.
-#
-# 2B etapas: Bio MLP be length/MW (abliacijos tyrimas)
-#   Pašalinus ilgį ir masę, tikrinama, ar modelis nesiremia
-#   vien šiais dviem lengvai atskiriamais požymiais.
-#
-# 3 etapas: Multimodal CNN + Bio MLP
-#   Dviejų šakų modelis, naudojantis abi informacijos rūšis.
-#   Gali pranokti atskirus modelius, jei abi informacijos rūšys
-#   papildo viena kitą.
-#
-# Random Forest (bazinis modelis)
-#   Klasikinis ansamblio metodas, skirtas palyginti su neuroniniais tinklais.
-#   Taip pat treniruojamas be length/MW abliacijos tikslais.
-# ================================================================
+Modeliai treniruojami nuosekliai ir jų rezultatai
+kaupiami žodyne `results`. Kiekvienas modelis:
+  1. Sukuriamas (build_*)
+  2. Treniruojamas su EarlyStopping (fit)
+  3. Geriausias slenkstis randamas iš validacijos
+  4. Įvertinamas testavimo rinkinyje (evaluate_model)
 
+1 etapas: CNN pagal seką
+  Naudoja tik koduotą aminorūgščių seką. Leidžia įvertinti,
+  kiek informacijos yra grynoje sekoje be papildomų požymių.
+
+2 etapas: Bio MLP
+  Naudoja 29 biocheminius požymius ir parodo, kiek informacijos
+  suteikia globalios fizinės bei cheminės baltymo savybės.
+
+2.b) etapas: Bio MLP be length/MW (abliacijos tyrimas)
+  Pašalinus ilgį ir molekulinę masę, tikrinama, ar modelis nesiremia
+  vien šiais dviem lengvai atskiriamais dydžio požymiais.
+
+3 etapas: Multimodal CNN + Bio MLP
+  Dviejų šakų modelis, naudojantis abi informacijos rūšis.
+  Gali pranokti atskirus modelius, jei abi informacijos rūšys
+  papildo viena kitą.
+
+Random Forest (bazinis modelis)
+  Klasikinis metodas, skirtas palyginti su neuroniniais tinklais.
+'''
 results = {}
 
 print("\n" + "=" * 70)
@@ -854,32 +826,25 @@ thr = find_best_threshold(y_val, val_probs)
 results["rf_without_length_mw"] = evaluate_model("RF be length/MW", y_test, test_probs, thr)
 
 
-# ================================================================
-# 8) REZULTATAI IR ATASKAITOS
-# ----------------------------------------------------------------
-# Visi modelių rezultatai surenkami į summary_df DataFrame ir
-# išsaugomi. Modeliai skirstomi į dvi grupes:
-#
-# MAIN_MODEL_KEYS — pagrindiniai 4 modeliai lyginami tarpusavyje:
-#   seq_cnn, bio_mlp, multimodal, rf
-#
-# ABLATION_MODEL_KEYS — abliacijos/artefakto patikros modeliai:
-#   bio_mlp_without_length_mw, rf_without_length_mw
-#   Jie naudojami patikrinti, ar rezultatai nėra pernelyg priklausomi
-#   nuo sekos ilgio ir molekulinės masės.
-#
-# Grafikai:
-#   roc_curves.png       — ROC kreivės visiems pagrindiniams modeliams
-#   model_comparison.png — stulpelinė diagrama AUC / Accuracy / F1
-#   confusion_matrices.png — 4 klaidų matricos viename paveikslėlyje
-#
-# Permutacinė svarba (permutation_importance):
-#   Kiekvienam požymiui apskaičiuojama, kiek AUC nukrenta, kai
-#   to požymio reikšmės sumaišomos atsitiktinai testavimo rinkinyje.
-#   Tai papildo Random Forest Gini svarbą, nes vertina požymio
-#   poveikį jau apmokyto modelio prognozėms.
-#   Skaičiuojama 10 kartų (n_repeats=10) ir imamas vidurkis.
-# ================================================================
+'''
+8) REZULTATAI IR ATASKAITOS
+
+Modelių rezultatai surenkami į summary_df duomenų lentelę ir išsaugomi.
+
+MAIN_MODEL_KEYS - pagrindiniai lyginami modeliai:
+  seq_cnn, bio_mlp, multimodal, rf
+
+ABLATION_MODEL_KEYS - modeliai be sekos ilgio ir molekulinės masės:
+  bio_mlp_without_length_mw, rf_without_length_mw
+
+Jie naudojami įvertinti, ar rezultatai nėra pernelyg priklausomi
+nuo baltymo dydžio požymių.
+
+Išsaugomi grafikai:
+  roc_curves.png - ROC kreivės
+  model_comparison.png - AUC, Accuracy ir F1 palyginimas
+  confusion_matrices.png - klaidų matricos
+'''
 
 summary_rows = []
 for key, res in results.items():
@@ -962,14 +927,14 @@ plt.tight_layout()
 plt.savefig(f"{RESULTS_DIR}/images/confusion_matrices.png", dpi=150)
 plt.close()
 
-# Gini svarba — greitai apskaičiuojama iš medžių struktūros.
+# Požymių svarba, apskaičiuota pagal Random Forest medžių struktūrą.
 feature_importance_df = pd.DataFrame({
     "feature": BIO_FEATURES,
     "importance": rf.feature_importances_,
 }).sort_values("importance", ascending=False)
 feature_importance_df.to_csv(f"{RESULTS_DIR}/reports/rf_feature_importance.csv", index=False)
 
-# Permutacinė svarba — patikimesnė, bet lėtesnė (n_repeats=10).
+# Permutacinė svarba - patikimesnė, bet lėtesnė (n_repeats=10).
 perm = permutation_importance(
     rf,
     X_bio_test,
@@ -988,7 +953,7 @@ perm_df = pd.DataFrame({
 perm_df.to_csv(f"{RESULTS_DIR}/reports/permutation_importance.csv", index=False)
 
 # Pilna testo rinkinio lentelė su visų modelių tikimybėmis,
-# spėjimais ir klaidų žymėmis — skirta gilesnei klaidų analizei.
+# spėjimais ir klaidų žymėmis.
 df_test_out = df_test.copy()
 df_test_out["true_label"] = y_test
 for key, res in results.items():
