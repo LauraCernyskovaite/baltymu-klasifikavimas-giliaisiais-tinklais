@@ -34,7 +34,7 @@ Rezultatai išsaugomi aplanke:
 results_cluster_split_1024/
 ```
 
-## AlphaFold struktūrinis eksperimentas
+## AlphaFold eksperimentas
 
 Paleidimas:
 
@@ -59,22 +59,34 @@ results_alphafold_distance_maps2/
 
 ## Pastabos dėl duomenų
 
-AlphaFold PDB struktūros ir apmokyti modeliai gali užimti daug vietos, todėl jie nėra būtini kelti į GitHub. Jei struktūrų aplankas neįkeliamas, jį reikia atkurti iš AlphaFold DB pagal `dataset_cluster_split_with_alphafold_status.csv` faile pateiktą informaciją.
+Duomenų atsisiuntimą AlphaFold eksperimentui galite rasti: 
+https://colab.research.google.com/drive/1mVwLyr05K-6FsnXtUsAYCjTPZLKcTP6_?usp=sharing
 
-## Aplinkos paruošimas
+## Eksperimentų paleidimas
 
-Rekomenduojama naudoti Python 3.10 arba naujesnę versiją.
+Repozitoriją galima atsisiųsti iš GitHub svetainės paspaudus Code ir pasirinkus Download ZIP.
+Atsisiųstą ZIP failą reikia išskleisti pasirinktame aplanke ir atidaryti su Visual Studio Code, Jupyter Notebook arba kita Python kodo vykdymui tinkama aplinka.
 
-```bash
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-Linux arba Google Colab aplinkoje MMseqs2 diegiamas atskirai:
+Pagrindinis eksperimentas, kuriame apmokomi ir palyginami CNN, MLP, multimodalus CNN ir MLP bei Random Forest modeliai, paleidžiamas komanda:
 
 ```bash
-apt-get update
-apt-get install -y mmseqs2
+python train_enzyme_classifier_cluster_split.py
 ```
 
+Linux ir macOS sistemose gali reikėti naudoti:
+
+```bash
+python3 train_enzyme_classifier_cluster_split.py
+```
+
+Papildomas AlphaFold struktūrinis eksperimentas paleidžiamas komanda:
+
+```bash
+python train_alphafold_distance_map_experiment.py
+```
+
+Linux ir macOS sistemose gali reikėti naudoti:
+
+```bash
+python3 train_alphafold_distance_map_experiment.py
+```
