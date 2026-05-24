@@ -34,12 +34,6 @@ Rezultatai išsaugomi aplanke:
 results_cluster_split_1024/
 ```
 
-Svarbiausia rezultatų lentelė:
-
-```text
-results_cluster_split_1024/reports/model_metrics.csv
-```
-
 ## AlphaFold struktūrinis eksperimentas
 
 Paleidimas:
