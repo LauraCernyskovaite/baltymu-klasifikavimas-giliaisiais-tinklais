@@ -1,0 +1,60 @@
+{
+  "source": "UniProt Swiss-Prot reviewed",
+  "enzyme_definition": "(reviewed:true) AND (ec:*) AND (fragment:false) AND (length:[50 TO 2000])",
+  "nonenzyme_candidate_definition": "(reviewed:true) AND (NOT (ec:*)) AND (fragment:false) AND (length:[50 TO 2000])",
+  "nonenzyme_note": "label=0 means proteins without EC number after annotation filtering, not absolutely proven non-enzymes.",
+  "target_per_class": 2500,
+  "download_per_class": 30000,
+  "min_len": 50,
+  "max_len": 2000,
+  "mmseqs_min_seq_id": 0.4,
+  "mmseqs_coverage": 0.8,
+  "mmseqs_cov_mode": 0,
+  "train_frac": 0.75,
+  "val_frac": 0.15,
+  "test_frac": 0.1,
+  "n_total": 5000,
+  "n_clusters": 3929,
+  "class_balance": {
+    "0": 2500,
+    "1": 2500
+  },
+  "split_sizes": {
+    "train": 3750,
+    "val": 750,
+    "test": 500
+  },
+  "split_balance": {
+    "test_0": 245,
+    "test_1": 255,
+    "train_0": 1869,
+    "train_1": 1881,
+    "val_0": 386,
+    "val_1": 364
+  },
+  "alphafold_downloaded": true,
+  "n_alphafold_structures_downloaded": 4888,
+  "structure_format_balance": {
+    "pdb": 4888
+  },
+  "files": {
+    "all_candidates_clean": "uniprot_clean_cluster_alphafold_api_dataset/all_candidates_clean.csv",
+    "model_csv_all_no_split": "uniprot_clean_cluster_alphafold_api_dataset/uniprot_enzyme_dataset_clean.csv",
+    "fasta": "uniprot_clean_cluster_alphafold_api_dataset/all_sequences.fasta",
+    "cluster_assignments": "uniprot_clean_cluster_alphafold_api_dataset/cluster_assignments.csv",
+    "dataset_cluster_split": "uniprot_clean_cluster_alphafold_api_dataset/dataset_cluster_split.csv",
+    "train": "uniprot_clean_cluster_alphafold_api_dataset/train.csv",
+    "val": "uniprot_clean_cluster_alphafold_api_dataset/val.csv",
+    "test": "uniprot_clean_cluster_alphafold_api_dataset/test.csv",
+    "alphafold_structure_report": "uniprot_clean_cluster_alphafold_api_dataset/alphafold_structure_report.csv",
+    "with_alphafold_status": "uniprot_clean_cluster_alphafold_api_dataset/dataset_cluster_split_with_alphafold_status.csv",
+    "only_with_alphafold_structure": "uniprot_clean_cluster_alphafold_api_dataset/dataset_only_with_alphafold_structure.csv",
+    "structure_dir": "uniprot_clean_cluster_alphafold_api_dataset/alphafold_structures"
+  },
+  "important_notes": [
+    "Use train.csv, val.csv and test.csv for sequence-only/deep-learning models.",
+    "Cluster split reduces homologous leakage between train/val/test.",
+    "AlphaFold structures are optional and should be used only in a separate structural feature/model stage.",
+    "Structures are downloaded through AlphaFold API metadata, not hard-coded model_v4 URLs."
+  ]
+}
