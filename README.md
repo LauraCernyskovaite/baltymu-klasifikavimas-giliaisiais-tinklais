@@ -57,12 +57,6 @@ Rezultatai išsaugomi aplanke:
 results_alphafold_distance_maps2/
 ```
 
-Svarbiausia rezultatų lentelė:
-
-```text
-results_alphafold_distance_maps2/reports/model_metrics.csv
-```
-
 ## Pastabos dėl duomenų
 
 AlphaFold PDB struktūros ir apmokyti modeliai gali užimti daug vietos, todėl jie nėra būtini kelti į GitHub. Jei struktūrų aplankas neįkeliamas, jį reikia atkurti iš AlphaFold DB pagal `dataset_cluster_split_with_alphafold_status.csv` faile pateiktą informaciją.
